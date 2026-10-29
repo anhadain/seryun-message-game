@@ -1,0 +1,173 @@
+gle';o.frequency.value=freq;f.type='lowpass';f.frequency.setValueAtTime(2400,t);f.frequency.exponentialRampToValueAtTime(900,t+dur);
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.13,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(f);f.connect(g);g.connect(this.musicGain);o.start(t);o.stop(t+dur+.03);
+ },
+ bass(freq,t,dur){
+  const o=this.ctx.createOscillator(),g=this.ctx.createGain(),f=this.ctx.createBiquadFilter();
+  o.type='sine';o.frequency.value=freq;f.type='lowpass';f.frequency.value=300;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.06,t+.08);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(f);f.connect(g);g.connect(this.musicGain);o.start(t);o.stop(t+dur+.05);
+ },
+ updateUI(){
+  const btn=document.getElementById('musicBtn'), label=document.getElementById('musicLabel'), dot=document.getElementById('audioDot');
+  if(!btn||!label||!dot)return;
+  const on=this.enabled&&this.started;
+  btn.classList.toggle('music-on',on);dot.classList.toggle('off',!on);label.textContent=on?'음악 ON':'음악 OFF';
+ }
+};
+
+const state={scenarioIndex:0,nodeIndex:0,mode:'single',sequence:[],sequencePos:0,points:0,answered:false};
+const $=id=>document.getElementById(id);
+
+function showScreen(id){
+ document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+ $(id).classList.add('active');
+ window.scrollTo(0,0);
+}
+
+function buildHome(){
+ const grid=$('scenarioGrid'); grid.innerHTML='';
+ SCENARIOS.forEach((s,i)=>{
+  const b=document.createElement('button'); b.className='scenario-card';
+  b.innerHTML=`<small>${s.number}</small><strong>${s.title}</strong><p>${s.summary}</p>`;
+  b.addEventListener('click',()=>startSingle(i)); grid.appendChild(b);
+ });
+}
+
+function startSingle(i){state.mode='single';state.sequence=[i];state.sequencePos=0;startCase(i)}
+function startRandom(){startSingle(Math.floor(Math.random()*SCENARIOS.length))}
+function startAll(){state.mode='all';state.sequence=SCENARIOS.map((_,i)=>i);state.sequencePos=0;startCase(state.sequence[0])}
+function startCase(i){
+ BGM.start();
+ state.scenarioIndex=i;state.nodeIndex=0;state.points=0;state.answered=false;
+ const s=SCENARIOS[i];
+ $('sceneImage').src=s.image;$('sceneImage').alt=s.title;
+ $('visualTitle').textContent=s.title;$('visualSubtitle').textContent=s.subtitle;
+ $('topCase').textContent=`${s.number} · ${s.title}`;$('chapterLabel').textContent=s.number;$('chapterName').textContent=s.title;
+ showScreen('game');renderNode();
+}
+
+function updateProgress(){
+ const s=SCENARIOS[state.scenarioIndex];
+ const pct=Math.max(2,Math.round(((state.nodeIndex+1)/s.nodes.length)*100));
+ $('progressBar').style.width=pct+'%';$('progressText').textContent=`${state.nodeIndex+1} / ${s.nodes.length}`;
+}
+
+function setPill(text){$('nodePill').textContent=text}
+function scrollTop(){const box=$('dialogueScroll');box.scrollTop=0}
+function nextNode(){
+ const s=SCENARIOS[state.scenarioIndex];
+ if(state.nodeIndex < s.nodes.length-1){state.nodeIndex++;state.answered=false;renderNode()}else finishCase();
+}
+
+function button(text,cls='primary'){
+ const b=document.createElement('button');b.className='btn '+cls;b.textContent=text;return b;
+}
+
+function renderNode(){
+ updateProgress();scrollTop();
+ const s=SCENARIOS[state.scenarioIndex], node=s.nodes[state.nodeIndex], box=$('dialogueScroll');
+ box.innerHTML='';
+ if(node.type==='story') renderStory(node,box);
+ else if(node.type==='choice') renderChoice(node,box);
+ else if(node.type==='quiz') renderQuiz(node,box);
+ else if(node.type==='multi') renderMulti(node,box);
+ else if(node.type==='lesson') renderLesson(node,box);
+ else {box.textContent='장면을 불러오는 중 문제가 생겼습니다.';setPill('오류');}
+}
+
+function renderStory(node,box){
+ setPill(node.tag||'이야기');
+ if(node.tag){const tag=document.createElement('div');tag.className='scene-tag';tag.textContent=node.tag;box.appendChild(tag)}
+ const sp=document.createElement('div');sp.className='speaker';sp.textContent=node.speaker;box.appendChild(sp);
+ const txt=document.createElement('div');txt.className='story-text';txt.textContent=node.text;box.appendChild(txt);
+ if(node.thought){const th=document.createElement('div');th.className='thought';th.textContent=node.thought;box.appendChild(th)}
+ const row=document.createElement('div');row.className='continue';const b=button('계속 →');b.addEventListener('click',nextNode);row.appendChild(b);box.appendChild(row);
+}
+
+function renderChoice(node,box){
+ setPill(node.tag||'대화 선택');
+ const tag=document.createElement('div');tag.className='stage st2';tag.textContent='💬 내가 말해 보기';box.appendChild(tag);
+ const p=document.createElement('div');p.className='prompt';p.textContent=node.prompt;box.appendChild(p);
+ const grid=document.createElement('div');grid.className='choice-grid';box.appendChild(grid);
+ node.options.forEach((opt,i)=>{
+  const b=document.createElement('button');b.className='choice';b.textContent=opt.text;
+  b.addEventListener('click',()=>{
+   if(state.answered)return;state.answered=true;state.points+=opt.points||0;
+   [...grid.children].forEach(x=>x.disabled=true);b.classList.add('chosen');
+   const out=document.createElement('div');out.className='choice-outcome';
+   out.innerHTML=`<div class="you-said">내가 고른 말</div><div class="reply-bubble">${escapeHtml(opt.reply)}</div><div class="mind-note"><b>마음 메모</b> · ${escapeHtml(opt.note)}</div>`;
+   box.appendChild(out);const row=document.createElement('div');row.className='actions';const n=button('다음 장면 →');n.addEventListener('click',nextNode);row.appendChild(n);box.appendChild(row);out.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });grid.appendChild(b);
+ });
+}
+
+const stageClass={'① 보이는 사실':'st1','③ 확인 질문':'st3','④ 관계를 살리는 말':'st4'};
+function renderQuiz(node,box){
+ setPill(node.stage);
+ const st=document.createElement('div');st.className='stage '+(stageClass[node.stage]||'st1');st.textContent=node.stage;box.appendChild(st);
+ const p=document.createElement('div');p.className='prompt';p.textContent=node.prompt;box.appendChild(p);
+ const grid=document.createElement('div');grid.className='choice-grid';box.appendChild(grid);
+ node.choices.forEach((text,i)=>{
+  const b=document.createElement('button');b.className='choice';b.textContent=text;
+  b.addEventListener('click',()=>{
+   if(state.answered)return;state.answered=true;const ok=i===node.answer;if(ok)state.points+=2;
+   [...grid.children].forEach(x=>x.disabled=true);b.classList.add(ok?'good':'bad');
+   const fb=document.createElement('div');fb.className='feedback '+(ok?'good':'bad');fb.textContent=(ok?'✓ ':'↺ ')+(ok?node.good:node.bad);box.appendChild(fb);
+   if(node.reveal){const r=document.createElement('div');r.className='reveal';r.textContent=node.reveal;box.appendChild(r)}
+   const row=document.createElement('div');row.className='actions';const n=button('다음 →');n.addEventListener('click',nextNode);row.appendChild(n);box.appendChild(row);fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+  });grid.appendChild(b);
+ });
+}
+
+function renderMulti(node,box){
+ setPill(node.stage);
+ const st=document.createElement('div');st.className='stage st2';st.textContent=node.stage;box.appendChild(st);
+ const p=document.createElement('div');p.className='prompt';p.textContent=node.prompt;box.appendChild(p);
+ const hint=document.createElement('div');hint.className='multi-hint';hint.textContent='가능하다고 생각되는 마음을 두 가지 고르세요.';box.appendChild(hint);
+ const grid=document.createElement('div');grid.className='choice-grid';box.appendChild(grid);
+ node.choices.forEach((opt,i)=>{const b=document.createElement('button');b.className='choice';b.textContent=opt.text;b.dataset.index=i;b.addEventListener('click',()=>{if(state.answered)return;b.classList.toggle('chosen');const selected=[...grid.querySelectorAll('.chosen')];if(selected.length>2)b.classList.remove('chosen')});grid.appendChild(b)});
+ const row=document.createElement('div');row.className='actions';const check=button('마음 확인하기');row.appendChild(check);box.appendChild(row);
+ check.addEventListener('click',()=>{
+  if(state.answered)return;const selected=[...grid.querySelectorAll('.chosen')];
+  if(selected.length!==2){const old=box.querySelector('.feedback');if(old)old.remove();const f=document.createElement('div');f.className='feedback bad';f.textContent='두 가지 가능성을 골라 주세요. 마음을 하나로 단정하지 않는 연습입니다.';box.insertBefore(f,row);return}
+  state.answered=true;const bad=selected.some(el=>!node.choices[Number(el.dataset.index)].open);if(!bad)state.points+=2;
+  [...grid.children].forEach(el=>el.disabled=true);selected.forEach(el=>el.classList.add(node.choices[Number(el.dataset.index)].open?'good':'bad'));
+  const f=document.createElement('div');f.className='feedback '+(bad?'bad':'good');f.textContent=bad?'↺ '+node.bad:'✓ '+node.good;box.insertBefore(f,row);check.remove();const n=button('다음 →');n.addEventListener('click',nextNode);row.appendChild(n);f.scrollIntoView({behavior:'smooth',block:'nearest'});
+ });
+}
+
+function renderLesson(node,box){
+ setPill('🌱 마음 배움');
+ const sp=document.createElement('div');sp.className='speaker';sp.textContent='마음번역소';box.appendChild(sp);
+ const t=document.createElement('div');t.className='story-text';t.textContent='이 이야기를 지나오며 마음을 어떻게 다시 번역하게 되었나요?';box.appendChild(t);
+ const card=document.createElement('div');card.className='lesson-card';card.innerHTML=`<b>${escapeHtml(node.title)}</b><p>${escapeHtml(node.text)}</p>`;box.appendChild(card);
+ const ref=document.createElement('div');ref.className='reflection';ref.innerHTML='💡 <b>생각해 보기</b><br>'+escapeHtml(node.reflection);box.appendChild(ref);
+ const row=document.createElement('div');row.className='continue';const b=button('이야기 마치기');b.addEventListener('click',nextNode);row.appendChild(b);box.appendChild(row);
+}
+
+function finishCase(){
+ const s=SCENARIOS[state.scenarioIndex];
+ $('resultTitle').textContent=`${s.title} · 마음번역 완료`;
+ const maxApprox=12;const lvl=state.points>=maxApprox?'여러 가능성을 열어 두고 대화하는 힘이 아주 잘 드러났어요.':state.points>=7?'상대의 마음을 확인하려는 선택이 많이 보였어요.':'처음 떠오른 생각을 사실로 만들지 않는 연습을 한 번 더 해 보면 좋아요.';
+ $('resultText').innerHTML=`<b>${lvl}</b><br>중요한 것은 정답 점수가 아니라, 실제 생활에서 <b>멈추고 → 여러 가능성을 생각하고 → 질문하고 → 관계를 살리는 말</b>을 선택하는 습관입니다.`;
+ const next=$('nextCaseBtn');
+ if(state.mode==='all'&&state.sequencePos<state.sequence.length-1){next.style.display='inline-block';next.textContent='다음 이야기 →'}
+ else if(state.mode==='all'){next.style.display='none'}
+ else {next.style.display='inline-block';next.textContent='다른 이야기 보기'}
+ showScreen('result');
+}
+
+function escapeHtml(str){return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+
+$('randomBtn').addEventListener('click',startRandom);$('allBtn').addEventListener('click',startAll);
+$('musicBtn').addEventListener('click',()=>BGM.toggle());$('volBtn').addEventListener('click',()=>BGM.cycleVolume());
+$('homeBtn').addEventListener('click',()=>showScreen('home'));$('resultHomeBtn').addEventListener('click',()=>showScreen('home'));
+$('retryBtn').addEventListener('click',()=>startCase(state.scenarioIndex));
+$('nextCaseBtn').addEventListener('click',()=>{if(state.mode==='all'&&state.sequencePos<state.sequence.length-1){state.sequencePos++;startCase(state.sequence[state.sequencePos])}else showScreen('home')});
+$('fullBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
+$('sceneImage').addEventListener('error',()=>{$('sceneImage').style.display='none';$('visualSubtitle').textContent='이미지를 불러오지 못했습니다. 이야기 진행에는 문제가 없습니다.'});
+
+buildHome();
+</script>
+</body></html>
