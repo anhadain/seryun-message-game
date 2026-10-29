@@ -34,6 +34,26 @@ button{font:inherit}button:focus-visible{outline:3px solid #ffc85f;outline-offse
 #result{align-items:center;justify-content:center;padding:25px;overflow:auto;background:linear-gradient(145deg,#d7f5ed,#e7dcff 48%,#ffe2b4)}.result-card{width:min(850px,94vw);background:#fff;border-radius:28px;box-shadow:var(--shadow);padding:38px;text-align:center}.result-card .icon{font-size:64px}.result-card h2{font-size:38px;margin:5px 0 9px}.result-card p{font-size:17px;line-height:1.7;color:#566176}.compass{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:20px 0}.compass div{border-radius:13px;padding:12px 8px;font-weight:900}.compass div:nth-child(1){background:#fff0bd}.compass div:nth-child(2){background:#ead7ff}.compass div:nth-child(3){background:#caf2e9}.compass div:nth-child(4){background:#cceaff}.result-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}
 @media(max-width:1050px){#game{height:auto;min-height:100vh;overflow:auto}.game-shell{height:auto;overflow:visible;grid-template-columns:1fr;max-width:900px}.visual-pane{height:520px}.story-pane{height:650px}.progress-wrap{display:none}}
 @media(max-width:720px){#home{padding:12px}.home-card{padding:24px}.scenario-grid{grid-template-columns:1fr}.home-title{font-size:52px}.game-shell{padding:8px;gap:8px}.visual-pane{height:390px;padding:9px}.story-pane{height:620px}.story-text{font-size:17px}.choice{font-size:14px}.dialogue-scroll{padding:16px}.topbar{padding:0 9px}.case-mini{display:none}.top-actions button{padding:7px}.compass{grid-template-columns:1fr 1fr}}
+/* MOBILE_IMAGE_FIX */
+@media(max-width:720px){
+ html,body{height:auto;min-height:100%;overflow-x:hidden}
+ #game{height:auto;min-height:100dvh;overflow:visible}
+ .topbar{height:auto;min-height:58px;flex:0 0 auto;flex-wrap:wrap;padding:7px 8px;position:sticky;top:0}
+ .brand-mini{font-size:15px}.progress-wrap,.case-mini{display:none}
+ .top-actions{gap:4px;flex-wrap:wrap;justify-content:flex-end}
+ .top-actions button{font-size:11px;padding:6px 7px}
+ #fullBtn{display:none}
+ .game-shell{height:auto!important;min-height:0;overflow:visible;display:block;padding:8px}
+ .visual-pane{height:auto!important;min-height:0;margin-bottom:8px;padding:8px}
+ .image-box{height:auto!important;min-height:0;aspect-ratio:16/9;flex:none;background:#fff}
+ .scene-image{display:block;width:100%;height:100%;object-fit:contain!important}
+ .visual-info{padding:8px 3px 2px}
+ .visual-info b{font-size:17px}.visual-info span{font-size:11px}
+ .skill-row{margin-top:6px}.skill{font-size:9px;padding:4px 6px}
+ .story-pane{height:auto!important;min-height:590px;max-height:none;overflow:visible}
+ .dialogue-scroll{min-height:500px;overflow:visible;padding:15px}
+ .story-text{font-size:17px}.choice{font-size:14px}
+}
 </style>
 </head>
 <body>
